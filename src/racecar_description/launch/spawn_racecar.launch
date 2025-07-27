@@ -1,0 +1,10 @@
+<launch>
+  <node name="diff_drive_controller" pkg="diff_drive" type="diff_drive" output="screen">
+    <param name="left_wheel" value="rear_wheel_left_joint"/>
+    <param name="right_wheel" value="rear_wheel_right_joint"/>
+    <param name="wheel_separation" value="0.4"/>
+    <param name="wheel_radius" value="0.15"/>
+    <!-- Spawn the racecar model -->
+    <node name="spawn_racecar" pkg="gazebo_ros" type="spawn_model" output="screen" args="-urdf -model racecar -x -0.3 -y 0 -z 0 -Y $(eval 'rand() * 0.06 - 0.03')">
+  </node>
+</launch>

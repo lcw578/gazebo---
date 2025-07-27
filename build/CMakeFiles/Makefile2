@@ -55,12 +55,14 @@ CMAKE_BINARY_DIR = /home/slz/catkin_ws/build
 # The main recursive "all" target.
 all: gtest/all
 all: fsac_track_worlds/all
+all: racecar_description/all
 
 .PHONY : all
 
 # The main recursive "preinstall" target.
 preinstall: gtest/preinstall
 preinstall: fsac_track_worlds/preinstall
+preinstall: racecar_description/preinstall
 
 .PHONY : preinstall
 
@@ -72,6 +74,7 @@ clean: CMakeFiles/tests.dir/clean
 clean: CMakeFiles/download_extra_data.dir/clean
 clean: gtest/clean
 clean: fsac_track_worlds/clean
+clean: racecar_description/clean
 
 .PHONY : clean
 
@@ -218,6 +221,24 @@ gtest/googletest/clean: gtest/googletest/CMakeFiles/gtest.dir/clean
 .PHONY : gtest/googletest/clean
 
 #=============================================================================
+# Directory level rules for directory racecar_description
+
+# Recursive "all" directory target.
+racecar_description/all:
+
+.PHONY : racecar_description/all
+
+# Recursive "preinstall" directory target.
+racecar_description/preinstall:
+
+.PHONY : racecar_description/preinstall
+
+# Recursive "clean" directory target.
+racecar_description/clean:
+
+.PHONY : racecar_description/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/doxygen.dir
 
 # All Build rule for target.
@@ -356,8 +377,8 @@ CMakeFiles/download_extra_data.dir/clean:
 # Target rules for target gtest/googlemock/CMakeFiles/gmock_main.dir
 
 # All Build rule for target.
-gtest/googlemock/CMakeFiles/gmock_main.dir/all: gtest/googletest/CMakeFiles/gtest.dir/all
 gtest/googlemock/CMakeFiles/gmock_main.dir/all: gtest/googlemock/CMakeFiles/gmock.dir/all
+gtest/googlemock/CMakeFiles/gmock_main.dir/all: gtest/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) -f gtest/googlemock/CMakeFiles/gmock_main.dir/build.make gtest/googlemock/CMakeFiles/gmock_main.dir/depend
 	$(MAKE) -f gtest/googlemock/CMakeFiles/gmock_main.dir/build.make gtest/googlemock/CMakeFiles/gmock_main.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/slz/catkin_ws/build/CMakeFiles --progress-num=3,4 "Built target gmock_main"

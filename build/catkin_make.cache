@@ -1,2 +1,2 @@
-fsac_track_worlds
+fsac_track_worlds:racecar_description
 -DCATKIN_DEVEL_PREFIX=/home/slz/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/slz/catkin_ws/install -G Unix Makefiles
