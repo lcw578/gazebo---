@@ -1,0 +1,8 @@
+prefix=/home/slz/catkin_ws/devel
+
+Name: fsac_track_worlds
+Description: Description of fsac_track_worlds
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
