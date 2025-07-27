@@ -3,14 +3,11 @@
   <param name="robot_description"
          textfile="$(find racecar_description)/urdf/racecar.urdf"/>
 
-  <!-- 定义随机偏航角参数 -->
-  <arg name="yaw" default="0.0"/>
+  <!-- 加载 Gazebo 并指定世界文件 -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find fsac_track_worlds)/worlds/fsac_track.world"/>
+  </include>
 
-  <!-- 加载自定义地图 -->
-  <include file="$(find fsac_track_worlds)/worlds/fsac_track.world"/>
-
-  <!-- 在Gazebo中生成小车 -->
-  <node name="spawn_racecar" pkg="gazebo_ros" type="spawn_model"
-        output="screen"
-        args="-urdf -param robot_description -model racecar -x 0 -y -0.3 -z 0.1 -Y $(arg yaw)"/>
+  <!-- 启动生成随机偏航角并生成小车的脚本 -->
+  <node name="generate_yaw_and_spawn" pkg="racecar_description" type="generate_yaw.py" output="screen" />
 </launch>

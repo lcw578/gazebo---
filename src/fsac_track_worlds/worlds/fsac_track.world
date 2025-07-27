@@ -7,38 +7,38 @@
       <real_time_update_rate>1000</real_time_update_rate>
       <max_step_size>0.001</max_step_size>
     </physics>
-    <include><name>red_0</name><uri>model://red_cone_1</uri><pose>0 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_0</name><uri>model://blue_cone_1</uri><pose>0  1.5 0 0 0 0</pose></include>
-    <include><name>red_5</name><uri>model://red_cone_1</uri><pose>5 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_5</name><uri>model://blue_cone_1</uri><pose>5  1.5 0 0 0 0</pose></include>
-    <include><name>red_10</name><uri>model://red_cone_1</uri><pose>10 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_10</name><uri>model://blue_cone_1</uri><pose>10  1.5 0 0 0 0</pose></include>
-    <include><name>red_15</name><uri>model://red_cone_1</uri><pose>15 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_15</name><uri>model://blue_cone_1</uri><pose>15  1.5 0 0 0 0</pose></include>
-    <include><name>red_20</name><uri>model://red_cone_1</uri><pose>20 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_20</name><uri>model://blue_cone_1</uri><pose>20  1.5 0 0 0 0</pose></include>
-    <include><name>red_25</name><uri>model://red_cone_1</uri><pose>25 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_25</name><uri>model://blue_cone_1</uri><pose>25  1.5 0 0 0 0</pose></include>
-    <include><name>red_30</name><uri>model://red_cone_1</uri><pose>30 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_30</name><uri>model://blue_cone_1</uri><pose>30  1.5 0 0 0 0</pose></include>
-    <include><name>red_35</name><uri>model://red_cone_1</uri><pose>35 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_35</name><uri>model://blue_cone_1</uri><pose>35  1.5 0 0 0 0</pose></include>
-    <include><name>red_40</name><uri>model://red_cone_1</uri><pose>40 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_40</name><uri>model://blue_cone_1</uri><pose>40  1.5 0 0 0 0</pose></include>
-    <include><name>red_45</name><uri>model://red_cone_1</uri><pose>45 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_45</name><uri>model://blue_cone_1</uri><pose>45  1.5 0 0 0 0</pose></include>
-    <include><name>red_50</name><uri>model://red_cone_1</uri><pose>50 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_50</name><uri>model://blue_cone_1</uri><pose>50  1.5 0 0 0 0</pose></include>
-    <include><name>red_55</name><uri>model://red_cone_1</uri><pose>55 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_55</name><uri>model://blue_cone_1</uri><pose>55  1.5 0 0 0 0</pose></include>
-    <include><name>red_60</name><uri>model://red_cone_1</uri><pose>60 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_60</name><uri>model://blue_cone_1</uri><pose>60  1.5 0 0 0 0</pose></include>
-    <include><name>red_65</name><uri>model://red_cone_1</uri><pose>65 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_65</name><uri>model://blue_cone_1</uri><pose>65  1.5 0 0 0 0</pose></include>
-    <include><name>red_70</name><uri>model://red_cone_1</uri><pose>70 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_70</name><uri>model://blue_cone_1</uri><pose>70  1.5 0 0 0 0</pose></include>
-    <include><name>red_75</name><uri>model://red_cone_1</uri><pose>75 -1.5 0 0 0 0</pose></include>
-    <include><name>blue_75</name><uri>model://blue_cone_1</uri><pose>75  1.5 0 0 0 0</pose></include>
+    <include><name>red_0</name><uri>model://red_cone_1</uri><pose>0 1.5 0 0 0 0</pose></include>
+    <include><name>blue_0</name><uri>model://blue_cone_1</uri><pose>0  -1.5 0 0 0 0</pose></include>
+    <include><name>red_5</name><uri>model://red_cone_1</uri><pose>5 1.5 0 0 0 0</pose></include>
+    <include><name>blue_5</name><uri>model://blue_cone_1</uri><pose>5  -1.5 0 0 0 0</pose></include>
+    <include><name>red_10</name><uri>model://red_cone_1</uri><pose>10 1.5 0 0 0 0</pose></include>
+    <include><name>blue_10</name><uri>model://blue_cone_1</uri><pose>10  -1.5 0 0 0 0</pose></include>
+    <include><name>red_15</name><uri>model://red_cone_1</uri><pose>15 1.5 0 0 0 0</pose></include>
+    <include><name>blue_15</name><uri>model://blue_cone_1</uri><pose>15  -1.5 0 0 0 0</pose></include>
+    <include><name>red_20</name><uri>model://red_cone_1</uri><pose>20 1.5 0 0 0 0</pose></include>
+    <include><name>blue_20</name><uri>model://blue_cone_1</uri><pose>20  -1.5 0 0 0 0</pose></include>
+    <include><name>red_25</name><uri>model://red_cone_1</uri><pose>25 1.5 0 0 0 0</pose></include>
+    <include><name>blue_25</name><uri>model://blue_cone_1</uri><pose>25  -1.5 0 0 0 0</pose></include>
+    <include><name>red_30</name><uri>model://red_cone_1</uri><pose>30 1.5 0 0 0 0</pose></include>
+    <include><name>blue_30</name><uri>model://blue_cone_1</uri><pose>30  -1.5 0 0 0 0</pose></include>
+    <include><name>red_35</name><uri>model://red_cone_1</uri><pose>35 1.5 0 0 0 0</pose></include>
+    <include><name>blue_35</name><uri>model://blue_cone_1</uri><pose>35  -1.5 0 0 0 0</pose></include>
+    <include><name>red_40</name><uri>model://red_cone_1</uri><pose>40 1.5 0 0 0 0</pose></include>
+    <include><name>blue_40</name><uri>model://blue_cone_1</uri><pose>40  -1.5 0 0 0 0</pose></include>
+    <include><name>red_45</name><uri>model://red_cone_1</uri><pose>45 1.5 0 0 0 0</pose></include>
+    <include><name>blue_45</name><uri>model://blue_cone_1</uri><pose>45  -1.5 0 0 0 0</pose></include>
+    <include><name>red_50</name><uri>model://red_cone_1</uri><pose>50 1.5 0 0 0 0</pose></include>
+    <include><name>blue_50</name><uri>model://blue_cone_1</uri><pose>50  -1.5 0 0 0 0</pose></include>
+    <include><name>red_55</name><uri>model://red_cone_1</uri><pose>55 1.5 0 0 0 0</pose></include>
+    <include><name>blue_55</name><uri>model://blue_cone_1</uri><pose>55  -1.5 0 0 0 0</pose></include>
+    <include><name>red_60</name><uri>model://red_cone_1</uri><pose>60 1.5 0 0 0 0</pose></include>
+    <include><name>blue_60</name><uri>model://blue_cone_1</uri><pose>60  -1.5 0 0 0 0</pose></include>
+    <include><name>red_65</name><uri>model://red_cone_1</uri><pose>65 1.5 0 0 0 0</pose></include>
+    <include><name>blue_65</name><uri>model://blue_cone_1</uri><pose>65  -1.5 0 0 0 0</pose></include>
+    <include><name>red_70</name><uri>model://red_cone_1</uri><pose>70 1.5 0 0 0 0</pose></include>
+    <include><name>blue_70</name><uri>model://blue_cone_1</uri><pose>70  -1.5 0 0 0 0</pose></include>
+    <include><name>red_75</name><uri>model://red_cone_1</uri><pose>75 1.5 0 0 0 0</pose></include>
+    <include><name>blue_75</name><uri>model://blue_cone_1</uri><pose>75  -1.5 0 0 0 0</pose></include>
     <include><name>yellow_R80</name><uri>model://yellow_cone_1</uri><pose>80 -1.5 0 0 0 0</pose></include>
     <include><name>yellow_L80</name><uri>model://yellow_cone_1</uri><pose>80  1.5 0 0 0 0</pose></include>
     <include><name>yellow_R85</name><uri>model://yellow_cone_1</uri><pose>85 -1.5 0 0 0 0</pose></include>

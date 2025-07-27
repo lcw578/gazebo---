@@ -11,8 +11,8 @@ with open('fsac_track.world', 'w') as f:
 
     # 0–75 m 红蓝各 16 根
     for x in range(0, 76, 5):
-        f.write(f'    <include><name>red_{x}</name><uri>model://red_cone_1</uri><pose>{x} -1.5 0 0 0 0</pose></include>\n')
-        f.write(f'    <include><name>blue_{x}</name><uri>model://blue_cone_1</uri><pose>{x}  1.5 0 0 0 0</pose></include>\n')
+        f.write(f'    <include><name>red_{x}</name><uri>model://red_cone_1</uri><pose>{x} 1.5 0 0 0 0</pose></include>\n')
+        f.write(f'    <include><name>blue_{x}</name><uri>model://blue_cone_1</uri><pose>{x}  -1.5 0 0 0 0</pose></include>\n')
 
     # 75–175 m 黄色左右各 21 根
     for x in range(80, 176, 5):
