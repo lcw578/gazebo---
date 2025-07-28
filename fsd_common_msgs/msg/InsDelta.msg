@@ -1,5 +1,0 @@
-std_msgs/Header header
-
-float32 total_omega_
-float32 total_distance_x_
-float32 total_distance_y_

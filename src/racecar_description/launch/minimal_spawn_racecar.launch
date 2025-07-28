@@ -1,9 +1,0 @@
-<launch>
-  <param name="robot_description"
-         textfile="/home/slz/catkin_ws/src/racecar_description/urdf/racecar.urdf"/>
-
-  <include file="$(find gazebo_ros)/launch/empty_world.launch"/>
-
-  <node name="spawn_racecar" pkg="gazebo_ros" type="spawn_model"
-        args="-urdf -param robot_description -model racecar -x -0.3 -y 0 -z 0.06"/>
-</launch>
