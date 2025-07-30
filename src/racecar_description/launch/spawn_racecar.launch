@@ -1,7 +1,7 @@
 <launch>
-  <!-- 加载URDF文件 -->
+  <!-- 修改这里：使用xacro命令加载模型 -->
   <param name="robot_description"
-         textfile="$(find racecar_description)/urdf/racecar.urdf"/>
+         command="$(find xacro)/xacro $(find racecar_description)/urdf/racecar.urdf.xacro"/>
 
   <!-- 加载 Gazebo 并指定世界文件 -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">

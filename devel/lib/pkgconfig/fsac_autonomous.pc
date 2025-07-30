@@ -1,0 +1,8 @@
+prefix=/home/slz/catkin_ws/devel
+
+Name: fsac_autonomous
+Description: Description of fsac_autonomous
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
