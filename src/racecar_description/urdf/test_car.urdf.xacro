@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test_car">
+
+  <!-- 简化的车身 -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.5 0.25 0.15"/>
+      </geometry>
+      <material name="red">
+        <color rgba="0.8 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.5 0.25 0.15"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="15.0"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.5" iyy="0.5" izz="0.5" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- 简化的轮子 -->
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}_wheel_link">
+      <visual>
+        <geometry>
+          <cylinder radius="0.05" length="0.03"/>
+        </geometry>
+        <material name="black">
+          <color rgba="0 0 0 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="0.05" length="0.03"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="1.0"/>
+        <inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_wheel_link"/>
+      <origin xyz="${x} ${y} -0.05" rpy="1.57 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- 四个轮子 -->
+  <xacro:wheel name="front_left" x="0.165" y="0.1"/>
+  <xacro:wheel name="front_right" x="0.165" y="-0.1"/>
+  <xacro:wheel name="rear_left" x="-0.165" y="0.1"/>
+  <xacro:wheel name="rear_right" x="-0.165" y="-0.1"/>
+
+  <!-- 激光雷达 -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.08"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.25 0 0.2" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo 差分驱动插件（更可靠） -->
+  <gazebo>
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <!-- 基本配置 -->
+      <robotNamespace>/</robotNamespace>
+      <alwaysOn>true</alwaysOn>
+      <updateRate>50</updateRate>
+      
+      <!-- 轮子配置 -->
+      <leftJoint>rear_left_wheel_joint</leftJoint>
+      <rightJoint>rear_right_wheel_joint</rightJoint>
+      <wheelSeparation>0.2</wheelSeparation>
+      <wheelDiameter>0.1</wheelDiameter>
+      <torque>20</torque>
+      
+      <!-- 话题配置 -->
+      <commandTopic>cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      
+      <!-- TF配置 -->
+      <odometryFrame>odom</odometryFrame>
+      <robotBaseFrame>base_link</robotBaseFrame>
+      <publishWheelTF>true</publishWheelTF>
+      <publishOdom>true</publishOdom>
+      <publishWheelJointState>true</publishWheelJointState>
+      <publishTF>true</publishTF>
+      
+      <!-- 物理参数 -->
+      <wheelAcceleration>2.0</wheelAcceleration>
+      <wheelTorque>20</wheelTorque>
+    </plugin>
+  </gazebo>
+
+  <!-- 激光雷达Gazebo插件 -->
+  <gazebo reference="lidar_link">
+    <sensor type="ray" name="lidar_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>20</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.2</min>
+          <max>25.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+      <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_laser.so">
+        <topicName>/scan</topicName>
+        <frameName>lidar_link</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+</robot>

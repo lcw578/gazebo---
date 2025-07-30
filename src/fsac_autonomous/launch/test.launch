@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find fsac_autonomous)/config/rosconsole.conf"/>
+  <param name="/tf2_ros/tf2_echo/logger" value="ERROR"/>
+  <!-- Gazebo世界和车辆加载 -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find fsac_track_worlds)/worlds/fsac_track.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+  </include>
+
+
+  <!-- 车辆模型描述 -->
+  <param name="robot_description" 
+         command="$(find xacro)/xacro $(find racecar_description)/urdf/test_car.urdf.xacro"/>
+
+  <!-- 生成车辆 -->
+  <node name="generate_yaw_and_spawn" pkg="racecar_description" type="generate_yaw.py" output="screen"/>
+
+  <!-- 机器人状态发布器 -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+
+  <!-- TF发布器 - 新增这一行 -->
+  <node pkg="fsac_autonomous" type="tf_publisher.py" name="tf_publisher" output="screen"/>
+
+  <!-- 感知模块 -->
+  <node pkg="fsac_autonomous" type="lidar_processor.py" name="lidar_processor" output="screen"/>
+  <node pkg="fsac_autonomous" type="cone_detector.py" name="cone_detector" output="screen"/>
+
+  <!-- SLAM状态估计 -->
+  <node pkg="fsac_autonomous" type="slam_estimator.py" name="slam_estimator" output="screen"/>
+
+  <!-- 建图模块 -->
+  <node pkg="fsac_autonomous" type="dynamic_mapper.py" name="dynamic_mapper" output="screen"/>
+
+  <!-- 路径规划 - 使用您现有的规划器 -->
+  <node pkg="fsac_autonomous" type="simple_path_planner.py" name="simple_path_planner" output="screen"/>
+
+  <!-- 车辆控制 -->
+  <node pkg="fsac_autonomous" type="vehicle_controller.py" name="vehicle_controller" output="screen"/>
+  <node pkg="fsac_autonomous" type="cmd_vel_converter.py" name="cmd_vel_converter" output="screen"/>
+
+  <!-- RViz可视化 -->
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" 
+        args="-d $(find fsac_autonomous)/config/fsac_visualization.rviz"/>
+
+</launch>

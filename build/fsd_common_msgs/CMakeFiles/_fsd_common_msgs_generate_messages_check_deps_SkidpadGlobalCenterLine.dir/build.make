@@ -54,7 +54,7 @@ CMAKE_BINARY_DIR = /home/slz/catkin_ws/build
 include fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_SkidpadGlobalCenterLine.dir/progress.make
 
 fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_SkidpadGlobalCenterLine:
-	cd /home/slz/catkin_ws/build/fsd_common_msgs && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py fsd_common_msgs /home/slz/catkin_ws/src/fsd_common_msgs/msg/SkidpadGlobalCenterLine.msg std_msgs/Header:geometry_msgs/Point:geometry_msgs/Pose:geometry_msgs/PoseStamped:nav_msgs/Path:geometry_msgs/Quaternion
+	cd /home/slz/catkin_ws/build/fsd_common_msgs && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py fsd_common_msgs /home/slz/catkin_ws/src/fsd_common_msgs/msg/SkidpadGlobalCenterLine.msg geometry_msgs/Point:nav_msgs/Path:geometry_msgs/Pose:std_msgs/Header:geometry_msgs/PoseStamped:geometry_msgs/Quaternion
 
 _fsd_common_msgs_generate_messages_check_deps_SkidpadGlobalCenterLine: fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_SkidpadGlobalCenterLine
 _fsd_common_msgs_generate_messages_check_deps_SkidpadGlobalCenterLine: fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_SkidpadGlobalCenterLine.dir/build.make
