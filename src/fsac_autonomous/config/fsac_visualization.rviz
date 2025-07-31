@@ -6,12 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
-        - /MarkerArray1
-        - /MarkerArray2
-        - /MarkerArray3
-        - /MarkerArray4
-        - /PointStamped1
+        - /Path2
       Splitter Ratio: 0.5
     Tree Height: 603
   - Class: rviz/Selection
@@ -161,7 +156,7 @@ Visualization Manager:
       Name: MarkerArray
       Namespaces:
         red_cones: true
-      Queue Size: 100
+      Queue Size: 10
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
@@ -169,7 +164,7 @@ Visualization Manager:
       Name: MarkerArray
       Namespaces:
         blue_cones: true
-      Queue Size: 100
+      Queue Size: 10
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
@@ -177,30 +172,71 @@ Visualization Manager:
       Name: MarkerArray
       Namespaces:
         {}
-      Queue Size: 100
+      Queue Size: 10
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /control/control_line
+      Marker Topic: /control/debug_markers
       Name: MarkerArray
       Namespaces:
-        {}
+        control_debug: true
       Queue Size: 100
       Value: true
     - Alpha: 1
       Class: rviz/PointStamped
       Color: 204; 41; 204
-      Enabled: true
+      Enabled: false
       History Length: 1
       Name: PointStamped
       Queue Size: 10
       Radius: 0.20000000298023224
       Topic: /clicked_point
       Unreliable: false
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /control/control_line
+      Name: MarkerArray
+      Namespaces:
+        control_line: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /planning/debug_markers
+      Name: MarkerArray
+      Namespaces:
+        path_points: true
+        target_point: true
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 25; 255; 0
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /planning/planning_line
+      Unreliable: false
       Value: true
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 255; 255; 255
     Default Light: true
     Fixed Frame: map
     Frame Rate: 30
@@ -226,7 +262,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.0013617650838568807
+      Distance: 0.0010000000474974513
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -234,17 +270,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 18.76626205444336
-        Y: -1.5538330078125
-        Z: 13.995487213134766
+        X: 19.044626235961914
+        Y: -2.512686014175415
+        Z: 13.627161026000977
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.44979625940322876
+      Pitch: 0.47979748249053955
       Target Frame: <Fixed Frame>
-      Yaw: 2.1703968048095703
+      Yaw: 3.2224268913269043
     Saved: ~
 Window Geometry:
   Displays:
@@ -262,5 +298,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1459
-  X: 463
-  Y: 247
+  X: 318
+  Y: 292

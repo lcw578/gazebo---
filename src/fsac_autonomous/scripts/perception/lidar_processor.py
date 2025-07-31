@@ -29,7 +29,7 @@ class LidarProcessor:
         self.max_cluster_size = rospy.get_param('~max_cluster_size', 50)
         
         # 订阅器
-        self.scan_sub = rospy.Subscriber('/perception/lidar/scan', LaserScan, self.scan_callback, queue_size=10)
+        self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback, queue_size=10)
         
         # 发布器
         self.clusters_pub = rospy.Publisher('/perception/lidar/clusters', ConeDetections, queue_size=10)
