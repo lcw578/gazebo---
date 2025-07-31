@@ -54,7 +54,7 @@ CMAKE_BINARY_DIR = /home/slz/catkin_ws/build
 include fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_YoloConeDetectionsTrack.dir/progress.make
 
 fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_YoloConeDetectionsTrack:
-	cd /home/slz/catkin_ws/build/fsd_common_msgs && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py fsd_common_msgs /home/slz/catkin_ws/src/fsd_common_msgs/msg/YoloConeDetectionsTrack.msg geometry_msgs/Point:std_msgs/String:fsd_common_msgs/YoloConeTrack:std_msgs/Header:std_msgs/UInt8:std_msgs/Float32
+	cd /home/slz/catkin_ws/build/fsd_common_msgs && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py fsd_common_msgs /home/slz/catkin_ws/src/fsd_common_msgs/msg/YoloConeDetectionsTrack.msg std_msgs/String:geometry_msgs/Point:std_msgs/Header:fsd_common_msgs/YoloConeTrack:std_msgs/UInt8:std_msgs/Float32
 
 _fsd_common_msgs_generate_messages_check_deps_YoloConeDetectionsTrack: fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_YoloConeDetectionsTrack
 _fsd_common_msgs_generate_messages_check_deps_YoloConeDetectionsTrack: fsd_common_msgs/CMakeFiles/_fsd_common_msgs_generate_messages_check_deps_YoloConeDetectionsTrack.dir/build.make
