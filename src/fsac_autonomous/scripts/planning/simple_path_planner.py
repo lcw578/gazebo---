@@ -1,485 +1,361 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-智能路径规划模块 - 75米直线加速赛 🏁 (已修复版)
-功能：
-1. 自动读取初始偏角并生成强制收敛的纠偏曲线
-2. 0-75米三段式加速冲刺
-3. 75米后紧急制动系统
-4. 实时动态路径重规划（优化触发条件）
-5. 基于偏离程度的自适应速度控制
+基于预建地图的路径规划器 🗺️➡️🛣️
+功能：加载离线地图，为小车提供规划线
 """
 
 import rospy
+import pickle
+import json
 import math
 import numpy as np
-from std_msgs.msg import Float32, String, Bool
+from scipy import interpolate
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
-from visualization_msgs.msg import MarkerArray, Marker
-from fsd_common_msgs.msg import CarState
+from std_msgs.msg import Float32, String, Bool
+from visualization_msgs.msg import Marker, MarkerArray  # 🎨 新增：可视化标记
 
-class SimplePathPlanner:
+class MapBasedPlanner:
     def __init__(self):
-        rospy.init_node('simple_path_planner', anonymous=True)
+        rospy.init_node('map_based_planner', anonymous=True)
         
-        # 🏁 赛道参数 - 针对3米窄赛道优化
-        self.track_width = 3.0            # 3米窄赛道
-        self.acceleration_length = 75.0   # 加速段：75米
-        self.track_length = 175.0         # 总长度：175米
-        self.correction_distance = 8.0    # 纠偏距离：从15米缩短到8米 ⚡
-        
-        # 🚀 速度参数 - 更保守的速度设置
-        self.target_speed_correction = 2.5   # 纠偏速度：降低到2.5m/s
-        self.target_speed_normal = 5.0       # 正常速度：降低到5.0m/s
-        self.target_speed_max = 8.0          # 最大速度：降低到8.0m/s
-        
-        # 📍 当前状态
-        self.current_car_state = {
-            'x': 0.0,
-            'y': 0.0,
-            'theta': 0.0,
-            'v_x': 0.0,
-            'v_y': 0.0
-        }
-        self.current_target_speed = 0.0
-        self.correction_complete = False
-        self.emergency_stop_triggered = False
-        
-        # 🛣️ 路径存储
-        self.planned_path = []
-        self.initial_yaw_degrees = 0.0
-        
-        # 📡 订阅器
-        self.state_sub = rospy.Subscriber('/estimation/slam/state', CarState, 
-                                        self.car_state_callback, queue_size=10)
-        
-        # 📢 发布器
-        self.path_pub = rospy.Publisher('/planning/global_path', Path, queue_size=10)
+        # 发布器
         self.planned_path_pub = rospy.Publisher('/planning/planned_path', Path, queue_size=10)
-        self.planning_line_pub = rospy.Publisher('/planning/planning_line', Path, queue_size=10)
         self.target_speed_pub = rospy.Publisher('/planning/target_speed', Float32, queue_size=10)
-        self.status_pub = rospy.Publisher('/planning/status', String, queue_size=10)
+        self.planner_status_pub = rospy.Publisher('/planning/status', String, queue_size=10)
+        self.path_available_pub = rospy.Publisher('/planning/path_available', Bool, queue_size=10)
         
-        # 🎨 可视化发布器
-        self.markers_pub = rospy.Publisher('/planning/debug_markers', MarkerArray, queue_size=10)
-        self.target_point_pub = rospy.Publisher('/planning/target_point', PoseStamped, queue_size=10)
+        # 🎨 新增：可视化发布器
+        self.planning_markers_pub = rospy.Publisher('/planning/markers', MarkerArray, queue_size=10)
+        self.planning_line_pub = rospy.Publisher('/planning/path_line', Marker, queue_size=10)
+        self.planning_points_pub = rospy.Publisher('/planning/path_points', MarkerArray, queue_size=10)
         
-        # 🔄 延迟初始化路径（等待参数）
-        rospy.Timer(rospy.Duration(1.0), self.delayed_initialization, oneshot=True)
+        # 地图数据
+        self.centerline_raw = []
+        self.centerline_smooth = []
+        self.map_loaded = False
         
-        # ⏱️ 主循环定时器 - 提高频率到20Hz
-        self.planning_timer = rospy.Timer(rospy.Duration(0.05), self.planning_loop)
+        # 规划参数
+        self.target_speed = 5.0  # 目标速度
+        self.path_resolution = 0.2  # 路径分辨率
+        self.smoothing_factor = 0.5  # 平滑因子
         
-        # 🚨 紧急停车定时器
-        self.emergency_timer = rospy.Timer(rospy.Duration(0.02), self.emergency_safety_check)
+        # 加载地图
+        self.load_map()
         
-        rospy.loginfo("🏁 智能路径规划器启动完成！")
-
-    def delayed_initialization(self, event):
-        """🔄 延迟初始化 - 等待参数服务器"""
-        self.read_initial_parameters()
-        self.generate_optimal_path()
-
-    def read_initial_parameters(self):
-        """📖 读取初始参数 - 移除测试代码"""
-        try:
-            # 等待参数设置
-            rospy.sleep(2.0)
+        if self.map_loaded:
+            self.generate_smooth_path()
             
-            # 读取初始偏角（由generate_yaw.py设置）
-            if rospy.has_param('/fsac/initial_yaw_degrees'):
-                self.initial_yaw_degrees = rospy.get_param('/fsac/initial_yaw_degrees', 0.0)
-                rospy.loginfo(f"🎯 读取到初始偏角: {self.initial_yaw_degrees:.2f}°")
-            else:
-                rospy.logwarn("⚠️ 未找到初始偏角参数，使用默认值0°")
-                self.initial_yaw_degrees = 0.0
+            # 定时发布规划路径
+            self.publish_timer = rospy.Timer(rospy.Duration(0.5), self.publish_planned_path)
+            # 🎨 定时发布可视化
+            self.viz_timer = rospy.Timer(rospy.Duration(1.0), self.publish_visualizations)
+            
+            rospy.loginfo("🛣️ 地图加载成功，开始提供规划路径")
+        else:
+            rospy.logfatal("❌ 地图加载失败，无法提供规划路径")
+
+    def load_map(self):
+        """加载预建地图"""
+        map_files = ['/tmp/track_map.pkl', '/tmp/track_map.json']
+        
+        for map_file in map_files:
+            try:
+                if map_file.endswith('.pkl'):
+                    with open(map_file, 'rb') as f:
+                        map_data = pickle.load(f)
+                else:
+                    with open(map_file, 'r') as f:
+                        map_data = json.load(f)
                 
-        except Exception as e:
-            rospy.logwarn(f"读取参数失败，使用默认值: {e}")
-            self.initial_yaw_degrees = 0.0
+                self.centerline_raw = map_data['centerline']
+                
+                if len(self.centerline_raw) > 2:
+                    self.map_loaded = True
+                    rospy.loginfo(f"✅ 成功加载地图: {map_file}")
+                    rospy.loginfo(f"📊 中心线点数: {len(self.centerline_raw)}")
+                    
+                    if 'metadata' in map_data:
+                        metadata = map_data['metadata']
+                        rospy.loginfo(f"📊 赛道长度: {metadata.get('track_length', 0):.1f}m")
+                        rospy.loginfo(f"📊 锥筒总数: {metadata.get('total_cones', 0)}")
+                    
+                    return
+                else:
+                    rospy.logwarn(f"地图文件 {map_file} 中中心线点数不足")
+                    
+            except FileNotFoundError:
+                rospy.logwarn(f"地图文件不存在: {map_file}")
+            except Exception as e:
+                rospy.logwarn(f"加载地图文件失败 {map_file}: {e}")
+        
+        rospy.logfatal("❌ 所有地图文件加载失败")
 
-    def generate_optimal_path(self):
-        """🛣️ 生成最优路径 - 基于当前实际状态"""
-        # ✅ 使用当前车辆的实际状态，而不是启动时的参数
-        car_x = self.current_car_state['x']
-        car_y = self.current_car_state['y']
-        car_theta = self.current_car_state['theta']  # 当前实际角度
+    def generate_smooth_path(self):
+        """生成平滑路径"""
+        if not self.centerline_raw:
+            return
         
-        rospy.loginfo(f"🔧 基于当前状态生成路径: 位置({car_x:.2f}, {car_y:.2f}), 角度{math.degrees(car_theta):.2f}°")
-        
-        # 清空路径
-        self.planned_path = []
-        
-        # 📐 动态计算纠偏需求
-        lateral_error = abs(car_y)
-        angle_error = abs(math.degrees(car_theta))
-        
-        # 🎯 从当前位置开始规划
-        start_x = max(0.0, car_x)
-        
-        # 🔧 动态纠偏距离
-        if lateral_error > 0.1 or angle_error > 0.5:
-            # 根据偏离程度确定纠偏距离
-            correction_distance = min(12.0, 5.0 + lateral_error * 3.0 + angle_error * 0.2)
-            correction_end_x = start_x + correction_distance
-            
-            # ✅ 使用当前实际状态生成纠偏曲线
-            correction_curve = self.generate_correction_curve(
-                start_x, correction_end_x, car_theta, car_y  # 传入当前状态
-            )
-            self.planned_path.extend(correction_curve)
-            rospy.loginfo(f"✅ 生成纠偏曲线: {start_x:.1f}→{correction_end_x:.1f}m (距离{correction_distance:.1f}m)")
-        else:
-            # 无需纠偏，直接生成直线到加速段
-            correction_end_x = max(start_x + 1, self.correction_distance)
-            for i in range(int(start_x), int(correction_end_x) + 1):
-                self.planned_path.append((float(i), 0.0))
-            rospy.loginfo("✅ 生成直线路径（无需纠偏）")
-        
-        # 🚀 阶段2：直线加速
-        for i in range(int(correction_end_x) + 1, int(self.acceleration_length) + 1):
-            self.planned_path.append((float(i), 0.0))
-        
-        # 🛑 阶段3：直线减速
-        for i in range(int(self.acceleration_length) + 1, int(self.track_length) + 1):
-            self.planned_path.append((float(i), 0.0))
-        
-        rospy.loginfo(f"🛣️ 路径重生成完成: 总共{len(self.planned_path)}个点")
-
-    def generate_correction_curve(self, start_x, end_x, current_theta, current_y):
-        """🎯 修正版纠偏曲线 - 强制向中心线收敛"""
-        path_points = []
-        L = end_x - start_x
-        
-        if L <= 0.1:
-            return [(start_x, current_y)]
-        
-        rospy.loginfo(f"🔧 纠偏参数: 起点({start_x:.1f}, {current_y:.3f}), "
-                     f"终点({end_x:.1f}, 0.0), 角度{math.degrees(current_theta):.1f}°")
-        
-        # 强制目标：在纠偏距离内，Y坐标必须线性回归到0
-        # 提高路径点密度以获得更平滑的控制
-        num_points = int(L * 5) + 1 
-        for i in range(num_points):
-            progress = float(i) / (num_points - 1) if num_points > 1 else 1.0
-            x = start_x + progress * L
-            
-            # 线性插值Y坐标，确保路径向中心线收敛
-            y = current_y * (1.0 - progress)
-            
-            path_points.append((x, y))
-            
-            # 调试输出关键点
-            if i < 5 or i == num_points - 1:
-                rospy.loginfo(f"纠偏点[{i}]: ({x:.2f}, {y:.3f})")
-        
-        return path_points
-
-    def car_state_callback(self, msg):
-        """🚗 车辆状态回调"""
         try:
-            self.current_car_state = {
-                'x': msg.car_state.x,
-                'y': msg.car_state.y,
-                'theta': msg.car_state.theta,
-                'v_x': msg.car_state_dt.car_state_dt.x,
-                'v_y': msg.car_state_dt.car_state_dt.y
-            }
-        except Exception as e:
-            rospy.logwarn_throttle(5.0, f"解析CarState失败: {e}")
-
-    def emergency_safety_check(self, event):
-        """🚨 紧急安全检查"""
-        car_x = self.current_car_state['x']
-        car_y = self.current_car_state['y']
-        
-        # 🚨 安全边界检查（3米赛道）
-        if car_x >= 80.0 or abs(car_y) > 1.3:  # 降低到1.3米触发紧急停车
-            if not self.emergency_stop_triggered:
-                rospy.logfatal(f"🚨 紧急停车！位置({car_x:.1f}, {car_y:.1f})")
-                self.emergency_stop_triggered = True
-
-            self.current_target_speed = 0.0
-            speed_msg = Float32()
-            speed_msg.data = 0.0
-            self.target_speed_pub.publish(speed_msg)
-
-    def planning_loop(self, event):
-        """🔄 主规划循环 - 添加实时路径重生成"""
-        if self.emergency_stop_triggered:
-            return
-
-        if not self.planned_path:
-            self.generate_optimal_path()  # 初始生成路径
-            return
-        
-        # 检查是否需要重新生成路径
-        if self.need_path_regeneration():
-            self.generate_optimal_path()  # 重新生成路径
-        
-        self.check_correction_status()
-        self.plan_speed()
-        
-        # 📡 发布
-        self.publish_paths()
-        self.publish_speeds()
-        self.publish_status()
-        
-        # 📊 调试日志
-        car_x = self.current_car_state['x']
-        car_y = self.current_car_state['y']
-        car_theta_deg = math.degrees(self.current_car_state['theta'])
-        current_speed = math.sqrt(self.current_car_state['v_x']**2 + self.current_car_state['v_y']**2)
-        
-        rospy.loginfo_throttle(2.0, 
-            f"🚗 状态: 位置({car_x:.1f}, {car_y:+.3f}), 角度{car_theta_deg:+.2f}°, "
-            f"速度{current_speed:.1f}→{self.current_target_speed:.1f}m/s")
-
-    def need_path_regeneration(self):
-        """降低敏感度的触发条件"""
-        car_y = self.current_car_state['y']
-        car_theta_deg = abs(math.degrees(self.current_car_state['theta']))
-        
-        # ✅ 放宽触发条件，避免频繁重规划
-        lateral_threshold = 0.4   # 0.4米偏离才重规划
-        angle_threshold = 3.0     # 3.0度偏离才重规划
-        
-        result = abs(car_y) > lateral_threshold or car_theta_deg > angle_threshold
-        if result:
-            rospy.logwarn_throttle(2.0, 
-                f"🔄 触发重生成: Y={car_y:.3f}m, θ={car_theta_deg:.2f}°")
-        return result
-
-    def check_correction_status(self):
-        """🎯 检查纠偏状态"""
-        car_x = self.current_car_state['x']
-        car_y = self.current_car_state['y']
-        car_theta_deg = math.degrees(self.current_car_state['theta'])
-        
-        # 更严格的纠偏完成条件
-        if car_x >= self.correction_distance:
-            self.correction_complete = True
-        elif abs(car_theta_deg) < 0.5 and abs(car_y) < 0.2:  # 更严格的条件
-            self.correction_complete = True
-        else:
-            self.correction_complete = False
-
-    def plan_speed(self):
-        """🚀 自适应速度规划 - 优化版"""
-        car_x = self.current_car_state['x']
-        car_y = self.current_car_state['y']
-        car_theta_deg = abs(math.degrees(self.current_car_state['theta']))
-        
-        lateral_error = abs(car_y)
-        angle_error = car_theta_deg
-        
-        # 🚨 紧急停车条件
-        if car_x >= 78.0 or lateral_error > 1.2:
-            self.current_target_speed = 0.0
-            rospy.logwarn_throttle(1.0, f"🚨 紧急停车！X={car_x:.1f}, Y={car_y:.2f}")
-            return
-        
-        # 🛑 减速阶段
-        if car_x >= self.acceleration_length:
-            distance_over = car_x - self.acceleration_length
-            if distance_over <= 3.0:
-                decel_factor = max(0.0, (3.0 - distance_over) / 3.0)
-                self.current_target_speed = 3.0 * decel_factor
-            else:
-                self.current_target_speed = 0.0
-            return
-        
-        # 🎯 自适应速度控制：基于偏离程度
-        stage = ""
-        if lateral_error > 0.8 or angle_error > 5.0:
-            # 严重偏离：极低速纠偏
-            self.current_target_speed = 1.0  # 降低到1.0m/s
-            stage = f"🚨严重偏离"
-        elif lateral_error > 0.4 or angle_error > 3.0:
-            # 中等偏离：低速纠偏
-            self.current_target_speed = 2.0  # 降低到2.0m/s
-            stage = f"⚠️中等偏离"
-        elif lateral_error > 0.2 or angle_error > 1.5:
-            # 轻微偏离：谨慎行驶
-            self.current_target_speed = 3.0
-            stage = f"🔧轻微偏离"
-        else:
-            # 正常行驶：正常加速
-            if car_x < 30:
-                self.current_target_speed = 4.0
-            elif car_x < 50:
-                self.current_target_speed = 6.0
-            else:
-                self.current_target_speed = 8.0
-            stage = f"🚀正常行驶"
-        
-        rospy.loginfo_throttle(3.0, 
-            f"{stage}: 横向{lateral_error:.3f}m, 角度{angle_error:.2f}°, 速度{self.current_target_speed:.1f}m/s")
-
-    def create_identity_quaternion(self):
-        """🧭 创建单位四元数"""
-        from geometry_msgs.msg import Quaternion
-        q = Quaternion()
-        q.x = 0.0
-        q.y = 0.0
-        q.z = 0.0
-        q.w = 1.0
-        return q
-
-    def create_path_msg(self, path_points, frame_id="map"):
-        """📍 创建Path消息"""
-        path_msg = Path()
-        path_msg.header.stamp = rospy.Time.now()
-        path_msg.header.frame_id = frame_id
-        
-        for x, y in path_points:
-            pose = PoseStamped()
-            pose.header.stamp = rospy.Time.now()
-            pose.header.frame_id = frame_id
+            # 提取坐标
+            x_points = [p['x'] for p in self.centerline_raw]
+            y_points = [p['y'] for p in self.centerline_raw]
             
-            pose.pose.position.x = x
-            pose.pose.position.y = y
+            # 按X坐标排序
+            sorted_indices = np.argsort(x_points)
+            x_sorted = np.array([x_points[i] for i in sorted_indices])
+            y_sorted = np.array([y_points[i] for i in sorted_indices])
+            
+            # 去重
+            unique_indices = np.where(np.diff(x_sorted) > 0.1)[0] + 1
+            if len(unique_indices) > 0:
+                unique_indices = np.concatenate(([0], unique_indices))
+                x_unique = x_sorted[unique_indices]
+                y_unique = y_sorted[unique_indices]
+            else:
+                x_unique = x_sorted
+                y_unique = y_sorted
+            
+            if len(x_unique) < 3:
+                rospy.logwarn("去重后点数不足，使用原始路径")
+                self.centerline_smooth = self.centerline_raw.copy()
+                return
+            
+            # B样条平滑
+            distances = np.cumsum(np.sqrt(np.diff(x_unique)**2 + np.diff(y_unique)**2))
+            t = np.zeros(len(x_unique))
+            t[1:] = distances
+            
+            spline_x = interpolate.UnivariateSpline(t, x_unique, s=self.smoothing_factor, k=min(3, len(t)-1))
+            spline_y = interpolate.UnivariateSpline(t, y_unique, s=self.smoothing_factor, k=min(3, len(t)-1))
+            
+            # 生成平滑路径
+            t_smooth = np.linspace(0, t[-1], int(t[-1] / self.path_resolution) + 1)
+            x_smooth = spline_x(t_smooth)
+            y_smooth = spline_y(t_smooth)
+            
+            self.centerline_smooth = []
+            for i, (x, y) in enumerate(zip(x_smooth, y_smooth)):
+                # 🎯 计算朝向角（用于可视化箭头）
+                if i < len(x_smooth) - 1:
+                    theta = math.atan2(y_smooth[i+1] - y, x_smooth[i+1] - x)
+                else:
+                    theta = math.atan2(y - y_smooth[i-1], x - x_smooth[i-1])
+                
+                self.centerline_smooth.append({
+                    'x': float(x), 
+                    'y': float(y),
+                    'theta': theta  # 🎯 添加朝向信息
+                })
+            
+            rospy.loginfo(f"🌊 路径平滑完成: {len(self.centerline_raw)} → {len(self.centerline_smooth)} 点")
+            
+        except Exception as e:
+            rospy.logwarn(f"路径平滑失败，使用原始路径: {e}")
+            self.centerline_smooth = self.centerline_raw.copy()
+
+    def publish_planned_path(self, event):
+        """发布规划路径"""
+        if not self.map_loaded or not self.centerline_smooth:
+            # 发布路径不可用信号
+            path_available_msg = Bool()
+            path_available_msg.data = False
+            self.path_available_pub.publish(path_available_msg)
+            
+            status_msg = String()
+            status_msg.data = "❌ 地图未加载或路径不可用"
+            self.planner_status_pub.publish(status_msg)
+            return
+        
+        # 发布完整规划路径
+        path_msg = Path()
+        path_msg.header.frame_id = "map"
+        path_msg.header.stamp = rospy.Time.now()
+        
+        for point in self.centerline_smooth:
+            pose = PoseStamped()
+            pose.header.frame_id = "map"
+            pose.header.stamp = rospy.Time.now()
+            pose.pose.position.x = point['x']
+            pose.pose.position.y = point['y']
             pose.pose.position.z = 0.0
-            pose.pose.orientation = self.create_identity_quaternion()
+            
+            # 🎯 添加朝向信息
+            if 'theta' in point:
+                theta = point['theta']
+                pose.pose.orientation.z = math.sin(theta / 2.0)
+                pose.pose.orientation.w = math.cos(theta / 2.0)
+            else:
+                pose.pose.orientation.w = 1.0
             
             path_msg.poses.append(pose)
         
-        return path_msg
-
-    def publish_paths(self):
-        """📡 发布路径"""
-        if not self.planned_path:
-            return
-            
-        path_msg = self.create_path_msg(self.planned_path)
-        
-        self.path_pub.publish(path_msg)
         self.planned_path_pub.publish(path_msg)
-        self.planning_line_pub.publish(path_msg)
         
-        self.publish_debug_markers()
-
-    def publish_speeds(self):
-        """📡 发布目标速度"""
+        # 发布目标速度
         speed_msg = Float32()
-        speed_msg.data = self.current_target_speed
+        speed_msg.data = self.target_speed
         self.target_speed_pub.publish(speed_msg)
-
-    def publish_status(self):
-        """📡 发布状态信息"""
-        car_x = self.current_car_state['x']
-        car_y = self.current_car_state['y']
         
-        if self.emergency_stop_triggered:
-            status = f"🚨 紧急停车 - 位置({car_x:.1f}, {car_y:.1f})"
-        elif car_x < self.correction_distance and not self.correction_complete:
-            angle_deg = math.degrees(self.current_car_state['theta'])
-            status = f"🔧 角度纠偏 - {car_x:.1f}m/{self.correction_distance}m, 角度{angle_deg:.2f}°, Y{car_y:+.3f}m"
-        elif car_x < self.acceleration_length:
-            progress = ((car_x - self.correction_distance) / (self.acceleration_length - self.correction_distance)) * 100
-            status = f"🚀 直线加速 - {progress:.1f}%, 速度{self.current_target_speed:.1f}m/s"
-        else:
-            distance_over = car_x - self.acceleration_length
-            status = f"🛑 制动阶段 - 超过{distance_over:.1f}m, 减速至{self.current_target_speed:.1f}m/s"
+        # 发布路径可用信号
+        path_available_msg = Bool()
+        path_available_msg.data = True
+        self.path_available_pub.publish(path_available_msg)
         
+        # 发布状态
         status_msg = String()
-        status_msg.data = status
-        self.status_pub.publish(status_msg)
-
-    def publish_debug_markers(self):
-        """🎨 发布可视化标记"""
-        if not self.planned_path:
-            return
-            
-        markers = MarkerArray()
-        car_x = self.current_car_state['x']
+        status_msg.data = f"✅ 规划路径可用: {len(self.centerline_smooth)}点, 目标速度{self.target_speed}m/s"
+        self.planner_status_pub.publish(status_msg)
         
-        # 🛣️ 路径点标记
-        for i, (x, y) in enumerate(self.planned_path[::5]):  # 每5个点显示一个，避免卡顿
+        rospy.loginfo_throttle(10.0, f"📡 发布规划路径: {len(self.centerline_smooth)} 点")
+
+    # 🎨 新增：可视化功能
+    def publish_visualizations(self, event):
+        """发布可视化标记"""
+        if not self.centerline_smooth:
+            return
+        
+        # 发布规划线（绿色线条）
+        self.publish_planning_line()
+        
+        # 发布路径点（绿色球体）
+        self.publish_planning_points()
+        
+        # 发布方向箭头
+        self.publish_direction_arrows()
+
+    def publish_planning_line(self):
+        """🟢 发布规划线（绿色线条）"""
+        line_marker = Marker()
+        line_marker.header.frame_id = "map"
+        line_marker.header.stamp = rospy.Time.now()
+        line_marker.ns = "planning_line"
+        line_marker.id = 0
+        line_marker.type = Marker.LINE_STRIP
+        line_marker.action = Marker.ADD
+        
+        # 线条属性
+        line_marker.scale.x = 0.3  # 线宽
+        line_marker.color.r = 0.0  # 绿色
+        line_marker.color.g = 1.0
+        line_marker.color.b = 0.0
+        line_marker.color.a = 0.9  # 透明度
+        
+        # 添加路径点
+        for point in self.centerline_smooth:
+            p = Point()
+            p.x = point['x']
+            p.y = point['y']
+            p.z = 0.1  # 稍微抬高避免重叠
+            line_marker.points.append(p)
+        
+        line_marker.lifetime = rospy.Duration(0)  # 永久显示
+        self.planning_line_pub.publish(line_marker)
+
+    def publish_planning_points(self):
+        """🟢 发布路径点（绿色球体）"""
+        marker_array = MarkerArray()
+        
+        # 每5个点显示一个球体，避免过密
+        for i in range(0, len(self.centerline_smooth), 5):
+            point = self.centerline_smooth[i]
+            
             marker = Marker()
             marker.header.frame_id = "map"
             marker.header.stamp = rospy.Time.now()
-            marker.ns = "path_points"
+            marker.ns = "planning_points"
             marker.id = i
             marker.type = Marker.SPHERE
             marker.action = Marker.ADD
             
-            marker.pose.position.x = x
-            marker.pose.position.y = y
-            marker.pose.position.z = 0.1
-            marker.pose.orientation = self.create_identity_quaternion()
+            # 位置
+            marker.pose.position.x = point['x']
+            marker.pose.position.y = point['y']
+            marker.pose.position.z = 0.15
+            marker.pose.orientation.w = 1.0
             
+            # 大小
             marker.scale.x = 0.2
             marker.scale.y = 0.2
             marker.scale.z = 0.2
             
-            # 根据阶段设置颜色
-            if x < self.correction_distance and not self.correction_complete:
-                marker.color.r = 1.0; marker.color.g = 0.6; marker.color.b = 0.0; marker.color.a = 0.9 # 橙色
-            elif x < self.acceleration_length:
-                marker.color.r = 0.0; marker.color.g = 1.0; marker.color.b = 0.0; marker.color.a = 0.8 # 绿色
-            else:
-                marker.color.r = 1.0; marker.color.g = 0.0; marker.color.b = 0.0; marker.color.a = 0.8 # 红色
+            # 颜色：亮绿色
+            marker.color.r = 0.0
+            marker.color.g = 1.0
+            marker.color.b = 0.0
+            marker.color.a = 0.8
             
-            markers.markers.append(marker)
+            marker.lifetime = rospy.Duration(0)
+            marker_array.markers.append(marker)
         
-        # 🎯 目标点标记
-        current_speed = math.sqrt(self.current_car_state['v_x']**2 + self.current_car_state['v_y']**2)
-        lookahead_distance = max(1.5, min(4.0, current_speed * 0.3))
-        
-        # 找到路径上最接近(car_x + lookahead_distance)的点
-        target_x = car_x + lookahead_distance
-        target_idx = 0
-        min_dist = float('inf')
-        for i, (px, py) in enumerate(self.planned_path):
-            dist = abs(px - target_x)
-            if dist < min_dist:
-                min_dist = dist
-                target_idx = i
-            if px > target_x: # 优化：超过目标x后停止搜索
-                break
+        self.planning_points_pub.publish(marker_array)
 
-        if target_idx < len(self.planned_path):
-            target_marker = Marker()
-            target_marker.header.frame_id = "map"
-            target_marker.header.stamp = rospy.Time.now()
-            target_marker.ns = "target_point"
-            target_marker.id = 9999
-            target_marker.type = Marker.SPHERE
-            target_marker.action = Marker.ADD
-            
-            target_marker.pose.position.x = self.planned_path[target_idx][0]
-            target_marker.pose.position.y = self.planned_path[target_idx][1]
-            target_marker.pose.position.z = 0.5
-            target_marker.pose.orientation = self.create_identity_quaternion()
-            
-            target_marker.scale.x = 0.6
-            target_marker.scale.y = 0.6
-            target_marker.scale.z = 0.6
-            
-            target_marker.color.r = 0.0; target_marker.color.g = 0.0; target_marker.color.b = 1.0; target_marker.color.a = 1.0 # 蓝色
-            
-            markers.markers.append(target_marker)
-            
-            # 发布目标点
-            target_pose = PoseStamped()
-            target_pose.header.frame_id = "map"
-            target_pose.header.stamp = rospy.Time.now()
-            target_pose.pose.position.x = self.planned_path[target_idx][0]
-            target_pose.pose.position.y = self.planned_path[target_idx][1]
-            target_pose.pose.position.z = 0.5
-            target_pose.pose.orientation = self.create_identity_quaternion()
-            self.target_point_pub.publish(target_pose)
+    def publish_direction_arrows(self):
+        """🎯 发布方向箭头"""
+        marker_array = MarkerArray()
         
-        self.markers_pub.publish(markers)
+        # 每10个点显示一个箭头
+        for i in range(0, len(self.centerline_smooth), 10):
+            point = self.centerline_smooth[i]
+            
+            if 'theta' not in point:
+                continue
+            
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "planning_arrows"
+            marker.id = i
+            marker.type = Marker.ARROW
+            marker.action = Marker.ADD
+            
+            # 位置和朝向
+            marker.pose.position.x = point['x']
+            marker.pose.position.y = point['y']
+            marker.pose.position.z = 0.2
+            
+            theta = point['theta']
+            marker.pose.orientation.z = math.sin(theta / 2.0)
+            marker.pose.orientation.w = math.cos(theta / 2.0)
+            
+            # 箭头大小
+            marker.scale.x = 1.0  # 长度
+            marker.scale.y = 0.15  # 宽度
+            marker.scale.z = 0.15  # 高度
+            
+            # 颜色：深绿色
+            marker.color.r = 0.0
+            marker.color.g = 0.8
+            marker.color.b = 0.0
+            marker.color.a = 0.7
+            
+            marker.lifetime = rospy.Duration(0)
+            marker_array.markers.append(marker)
+        
+        # 合并发布
+        all_markers = MarkerArray()
+        all_markers.markers.extend(marker_array.markers)
+        self.planning_markers_pub.publish(all_markers)
+
+    def calculate_path_length(self):
+        """计算路径总长度"""
+        if len(self.centerline_smooth) < 2:
+            return 0.0
+        
+        total_length = 0.0
+        for i in range(len(self.centerline_smooth) - 1):
+            p1 = self.centerline_smooth[i]
+            p2 = self.centerline_smooth[i + 1]
+            length = math.sqrt((p2['x'] - p1['x'])**2 + (p2['y'] - p1['y'])**2)
+            total_length += length
+        
+        return total_length
 
 if __name__ == '__main__':
     try:
-        planner = SimplePathPlanner()
-        rospy.loginfo("🏁 智能路径规划器运行中...")
+        planner = MapBasedPlanner()
+        rospy.loginfo("🛣️ 基于地图的路径规划器运行中...")
         rospy.spin()
     except rospy.ROSInterruptException:
-        rospy.loginfo("🏁 路径规划器安全关闭")
-    except Exception as e:
-        rospy.logfatal(f"🚨 路径规划器异常: {str(e)}")
+        rospy.loginfo("🛣️ 路径规划器关闭")

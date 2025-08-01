@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
+<!-- filepath: e:\gazebo大作业\catkin_ws\catkin_ws\src\racecar_description\urdf\test_car.urdf.xacro -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test_car">
 
-  <!-- 简化的车身 -->
+  <!-- 🚗 车身基座 -->
   <link name="base_link">
     <visual>
       <geometry>
@@ -23,7 +24,25 @@
     </inertial>
   </link>
 
-  <!-- 简化的轮子 -->
+  <!-- 🎯 前方指示器（显示车头方向） -->
+  <link name="front_indicator">
+    <visual>
+      <geometry>
+        <cylinder radius="0.03" length="0.08"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+  </link>
+  
+  <joint name="front_indicator_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_indicator"/>
+    <origin xyz="0.28 0 0.12" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 🛞 轮子宏定义 -->
   <xacro:macro name="wheel" params="name x y">
     <link name="${name}_wheel_link">
       <visual>
@@ -49,97 +68,81 @@
       <parent link="base_link"/>
       <child link="${name}_wheel_link"/>
       <origin xyz="${x} ${y} -0.05" rpy="1.57 0 0"/>
-      <axis xyz="0 0 1"/>
+      <axis xyz="0 0 -1"/>
     </joint>
   </xacro:macro>
 
-  <!-- 四个轮子 -->
+  <!-- 🛞 生成四个轮子 -->
   <xacro:wheel name="front_left" x="0.165" y="0.1"/>
   <xacro:wheel name="front_right" x="0.165" y="-0.1"/>
   <xacro:wheel name="rear_left" x="-0.165" y="0.1"/>
   <xacro:wheel name="rear_right" x="-0.165" y="-0.1"/>
 
-  <!-- 激光雷达 -->
-  <link name="lidar_link">
-    <visual>
-      <geometry>
-        <cylinder radius="0.04" length="0.08"/>
-      </geometry>
-      <material name="blue">
-        <color rgba="0 0 1 1"/>
-      </material>
-    </visual>
-    <inertial>
-      <mass value="0.1"/>
-      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
-    </inertial>
-  </link>
-
-  <joint name="lidar_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="lidar_link"/>
-    <origin xyz="0.25 0 0.2" rpy="0 0 0"/>
-  </joint>
-
-  <!-- Gazebo 差分驱动插件（更可靠） -->
+  <!-- 🎮 Gazebo差速驱动插件（使用后轮作为驱动轮） -->
   <gazebo>
     <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
-      <!-- 基本配置 -->
+      <!-- 🎯 基本配置 -->
       <robotNamespace>/</robotNamespace>
       <alwaysOn>true</alwaysOn>
       <updateRate>50</updateRate>
       
-      <!-- 轮子配置 -->
+      <!-- 🛞 驱动轮配置（后轮） -->
       <leftJoint>rear_left_wheel_joint</leftJoint>
       <rightJoint>rear_right_wheel_joint</rightJoint>
-      <wheelSeparation>0.2</wheelSeparation>
-      <wheelDiameter>0.1</wheelDiameter>
+      <wheelSeparation>0.2</wheelSeparation>        <!-- 轮距20cm -->
+      <wheelDiameter>0.1</wheelDiameter>             <!-- 轮径10cm -->
       <torque>20</torque>
       
-      <!-- 话题配置 -->
-      <commandTopic>cmd_vel</commandTopic>
-      <odometryTopic>odom</odometryTopic>
+      <!-- 📡 ROS话题配置 -->
+      <commandTopic>cmd_vel</commandTopic>           <!-- 控制指令输入 -->
+      <odometryTopic>odom</odometryTopic>            <!-- 里程计输出 -->
       
-      <!-- TF配置 -->
-      <odometryFrame>odom</odometryFrame>
-      <robotBaseFrame>base_link</robotBaseFrame>
-      <publishWheelTF>true</publishWheelTF>
-      <publishOdom>true</publishOdom>
-      <publishWheelJointState>true</publishWheelJointState>
-      <publishTF>true</publishTF>
+      <!-- 🗺️ TF坐标系配置 -->
+      <odometryFrame>odom</odometryFrame>            <!-- 里程计坐标系 -->
+      <robotBaseFrame>base_link</robotBaseFrame>     <!-- 机器人基座坐标系 -->
+      <publishWheelTF>false</publishWheelTF>         <!-- 不发布轮子TF -->
+      <publishOdom>true</publishOdom>                <!-- 发布里程计 -->
+      <publishWheelJointState>false</publishWheelJointState>  <!-- 不发布关节状态 -->
+      <publishTF>true</publishTF>                    <!-- 发布odom->base_link变换 -->
       
-      <!-- 物理参数 -->
+      <!-- ⚙️ 物理参数 -->
       <wheelAcceleration>2.0</wheelAcceleration>
       <wheelTorque>20</wheelTorque>
+      <odometrySource>world</odometrySource>         <!-- 里程计数据来源 -->
+      <publishOdomTF>true</publishOdomTF>            <!-- 发布里程计TF变换 -->
+      
+      
     </plugin>
   </gazebo>
 
-  <!-- 激光雷达Gazebo插件 -->
-  <gazebo reference="lidar_link">
-    <sensor type="ray" name="lidar_sensor">
-      <pose>0 0 0 0 0 0</pose>
-      <visualize>true</visualize>
-      <update_rate>20</update_rate>
-      <ray>
-        <scan>
-          <horizontal>
-            <samples>360</samples>
-            <resolution>1</resolution>
-            <min_angle>-3.14159</min_angle>
-            <max_angle>3.14159</max_angle>
-          </horizontal>
-        </scan>
-        <range>
-          <min>0.2</min>
-          <max>25.0</max>
-          <resolution>0.01</resolution>
-        </range>
-      </ray>
-      <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_laser.so">
-        <topicName>/scan</topicName>
-        <frameName>lidar_link</frameName>
-      </plugin>
-    </sensor>
+  <!-- 🎨 Gazebo材质（移除摩擦力定义） -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Red</material>
+    <!-- 移除 mu1 和 mu2，使用默认值 -->
+  </gazebo>
+
+  <gazebo reference="front_left_wheel_link">
+    <material>Gazebo/DarkGrey</material>
+    <!-- 移除摩擦力定义 -->
+  </gazebo>
+
+  <gazebo reference="front_right_wheel_link">
+    <material>Gazebo/DarkGrey</material>
+    <!-- 移除摩擦力定义 -->
+  </gazebo>
+
+  <gazebo reference="rear_left_wheel_link">
+    <material>Gazebo/DarkGrey</material>
+    <!-- 移除摩擦力定义 -->
+  </gazebo>
+
+  <gazebo reference="rear_right_wheel_link">
+    <material>Gazebo/DarkGrey</material>
+    <!-- 移除摩擦力定义 -->
+  </gazebo>
+
+  <gazebo reference="front_indicator">
+    <material>Gazebo/White</material>
   </gazebo>
 
 </robot>
